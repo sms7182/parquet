@@ -1,6 +1,10 @@
 use std::env::args;
+use std::fs::File;
+use std::io::BufWriter;
 use csv::Writer;
 use arrow::compute::kernels::{numeric, rank};
+use parquet::arrow::arrow_reader::RowFilter;
+use parquet::record::reader::RowIter;
 use parquet::record::{Row, reader};
 use parquet::schema::types::Type;
 use parquet::file::reader::{FileReader,SerializedFileReader};
@@ -9,7 +13,7 @@ use arrow::record_batch::RecordBatch;
 use parquet::arrow::arrow_writer::ArrowWriter;
 use parquet::record::Field;
 use std::error::Error;
-
+use csv::WriterBuilder;
 fn main() {
     let args:Vec<String>=args().collect();
     
@@ -31,6 +35,9 @@ fn main() {
         },
         "columns"=>{
             columns_command(&args[1..]);
+        },
+        "export"=>{
+            export_command(&args[1..]);
         }
         _=>{
             eprintln!("{}:{}",red("unknown command "),red(&args[1]));
@@ -176,8 +183,117 @@ fn columns_command(parts:&[String]){
 
 
 
+fn export_command(parts:&[String]){
+    if parts[2]!="--output"{
+        panic!("incorrect command for export");
+    }
+    let mut pairs= parts[3].split(".");
+    let mut file_name="";
+    if let Some(fl_name)=pairs.next(){
+        if let Some(file_type)=pairs.next(){
+            if file_type!="csv"{
+                panic!("now this type for export not support,{:?}",file_type);
+            }
+            file_name=fl_name;
+        }
+    }
+    let file=std::fs::File::open(&parts[1]).unwrap();
+    let reader=SerializedFileReader::new(file).unwrap();
+    
+
+    let num_groups=reader.num_row_groups();
+
+    let csv_file=File::create(format!("{}.csv",file_name)).unwrap();
+    let mut csv_writer = WriterBuilder::new()
+    .has_headers(false)
+    .from_writer(BufWriter::with_capacity(128 * 1024, csv_file));
+    
+        
+    let mut headers_written = false;
+    let mut total_rows = 0;
+    for group_idx in 0..num_groups{
+        let row_group=match reader.get_row_group(group_idx){
+            Ok(group)=>group,
+            Err(e)=>{
+                eprintln!("Failed to get row group:{}",e);
+                return;
+            }
+        };
+        let row_iter=match row_group.get_row_iter(None){
+            Ok(iter)=>iter,
+            Err(e)=>{
+                eprintln!("Failed to get row iterator:{}",e);
+                return;
+            }
+        };
+
+        for row_result in row_iter{
+            match row_result{
+                Ok(row)=>{
+                    if !headers_written{
+                        let headers:Vec<String>=row.get_column_iter()
+                            .map(|(name,_)|name.clone())
+                            .collect();
+                        if let Err(e)=csv_writer.write_record(&headers){
+                            eprintln!("Failed to write headers: {}", e);
+                            return;
+                        }
+                        headers_written=true;
+                        
+                    }
+                    let csv_record=convert_to_csv(&row);
+                    if let Err(e) = csv_writer.write_record(&csv_record) {
+                        eprintln!("Failed to write row: {}", e);
+                        return;
+                    }
+                    total_rows += 1;
+                    
+                    if total_rows % 100000 == 0 {
+                        println!("Processed {} rows...", total_rows);
+                        if let Err(e) = csv_writer.flush() {
+                            eprintln!("Failed to flush: {}", e);
+                        }
+                    }
+
+                },
+                Err(e)=>{
+                     eprintln!("Error reading row: {}", e);
+                    return;
+                }
+            }
+           
+        }
+
+    }
+      if let Err(e) = csv_writer.flush() {
+        eprintln!("Failed final flush: {}", e);
+    } else {
+        println!("Export completed! Written {} rows to {}.csv", total_rows, file_name);
+    }
 
 
+}
+
+fn convert_to_csv(row:&Row)->Vec<String>{
+    let mut record=Vec::new();
+    for(_,value)in row.get_column_iter(){
+          let value_str = match value {
+            Field::Str(s) => s.clone(),
+            Field::Long(i) => i.to_string(),
+            Field::Int(i) => i.to_string(),
+            Field::Double(f) => f.to_string(),
+            Field::Float(f) => f.to_string(),
+            Field::Bool(b) => b.to_string(),
+            Field::Null => "".to_string(),
+            
+            Field::Group(group_fields) => format!("{:?}", group_fields),
+            _ => format!("{:?}", value),
+        };
+        record.push(value_str);
+    }
+    record
+
+}
 fn inspect_row_detail(row:&Row, vls:&mut Vec<String>){
     for (_,value) in row.get_column_iter(){
         match value {
