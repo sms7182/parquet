@@ -7,7 +7,8 @@ Command-line Parquet file viewer written in Rust.
 
 
 ## Status
-
+Schema Done,
+Head Done,
 🚧 Under construction. Not ready for use yet.
 
 ## Planned features
