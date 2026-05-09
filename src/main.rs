@@ -14,9 +14,30 @@ use parquet::arrow::arrow_writer::ArrowWriter;
 use parquet::record::Field;
 use std::error::Error;
 use csv::WriterBuilder;
+
+fn print_help() {
+    println!("pq - Parquet file tools");
+    println!("\nUsage:");
+    println!("  pq schema <file.parquet>              - Show schema");
+    println!("  pq head <file.parquet> <rows> [--csv filename] - Show first N rows");
+    println!("  pq columns <file.parquet>             - List columns");
+    println!("  pq count <file.parquet>               - Count rows");
+    println!("  pq export <file.parquet> --output <file.csv> - Export to CSV");
+    println!("\nExamples:");
+    println!("  pq head data.parquet 5");
+    println!("  pq head data.parquet 5 --csv output.csv");
+    println!("  pq export data.parquet --output data.csv");
+}
 fn main() {
     let args:Vec<String>=args().collect();
     
+
+    if args.len() < 2 || args[1] == "--help" || args[1] == "-h" {
+        print_help();
+        return;
+    }
+    
+
     if args.len()==1{
         println!("{}",green("Usage: pq <command> <file> [options]"));
         println!("{}",green("Commands: "));
