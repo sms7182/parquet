@@ -2,22 +2,21 @@
 
 Command-line Parquet file viewer written in Rust.
 
-
-> **Note on context:** In Iran, the internet has been cut off since February 28th. To keep my sanity and endure life within these walls, I turned to coding. I spent this time learning Rust and recreating the game of my childhood. The internet remains blocked, but I have managed to push this repository.
-
-
 ## Status
-Schema Done,
-Head Done,
-🚧 Under construction. Not ready for use yet.
 
-## Planned features
+- ✅ Schema command - done
+- ✅ Head command - done
+- ✅ Columns command - done
+- ✅ Count command - done
 
-- Show schema of a Parquet file
+## Features
+
+- Show schema (column names and data types)
 - Show first N rows (like `head`)
+- Show only column names
 - Count total records
-- Lightweight and fast
 
-## License
+## Installation
 
-MIT OR Apache-2.0
+```bash
+cargo install pq
