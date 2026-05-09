@@ -1,11 +1,13 @@
 use std::env::args;
 
-use arrow::compute::kernels::rank;
+use arrow::compute::kernels::{numeric, rank};
+use parquet::record::Row;
 use parquet::schema::types::Type;
 use parquet::file::reader::{FileReader,SerializedFileReader};
 use arrow::array::{Int64Array, StringArray};
 use arrow::record_batch::RecordBatch;
 use parquet::arrow::arrow_writer::ArrowWriter;
+use parquet::record::Field;
 use std::sync::Arc;
 use std::fs::File;
 fn tmain() {
@@ -110,11 +112,64 @@ fn head_command(parts:&[String]){
     std::process::exit(1);
 }
    else{
- 
-    println!("Show first {} rows from {}",green(parts[2].as_str()),green(parts[1].as_str()));
+    
+    // println!("Show first {} rows from {}",green(parts[2].as_str()),green(parts[1].as_str()));
+     let file=std::fs::File::open(&parts[1]).unwrap();
+    let reader=SerializedFileReader::new(file).unwrap();
+    let schema=reader.metadata().file_metadata().schema();
+    let fields=schema.get_fields();
+    
+    println!("{:-<50}","");
+    for field in fields{
+        print!("| {} ",green(field.name()));
+        
+    }
+    print!("|");
+    println!("");
+    println!("{:-<50}","");
+    let mut row_iter = reader.get_row_iter(None).expect("Failed to get row iterator");
+    let num_rows: usize=parts[2].parse().unwrap();
+    let mut results:Vec<parquet::record::Row> = Vec::with_capacity(num_rows);
+    for _ in 0..num_rows{
+        match row_iter.next() {
+            Some(Ok(row))=>{
+                inspect_row_detail(&row);
+                println!("|");
+                println!("{:-<50}","");
 
 
+            },
+            Some(Err(e))=>panic!("Error reading row:{}",e),
+            None=>break,
+        }
+    }
    }
+}
+
+fn inspect_row_detail(row:&Row){
+    for (col_name,value) in row.get_column_iter(){
+        match value {
+            Field::Str(s) => {
+                print!("| '{}' ", s);
+            }
+            Field::Long(i) => {
+                print!("| {} ", i);
+            }
+            Field::Double(f) => {
+                print!("| {} ", f);
+            }
+            Field::Bool(b) => {
+                print!("| {} ", b);
+            }
+            Field::Null => {
+                print!("|  NULL value");
+            }
+            Field::Group(group_fields) => {
+                print!("| {} ", group_fields.len());
+            }
+            _ => print!("|  Other type: {:?}", value),
+        }
+    }
 }
 fn green(text: &str) -> String {
     format!("\x1b[32m{}\x1b[0m", text)
