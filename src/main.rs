@@ -165,12 +165,10 @@ fn columns_command(parts:&[String]){
     let schema=reader.metadata().file_metadata().schema();
     let fields=schema.get_fields();
     
-    println!("{:-<50}","");
     for field in fields{
-        print!("| {} ",green(field.name()));
+        println!("{} ",green(field.name()));
     }
-    println!();
-    println!("{:-<50}","");
+   
 }
 
 
