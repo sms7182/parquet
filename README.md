@@ -19,4 +19,4 @@ Command-line Parquet file viewer written in Rust.
 ## Installation
 
 ```bash
-cargo install pq
+cargo install pq-rs

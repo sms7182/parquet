@@ -10,27 +10,6 @@ use parquet::arrow::arrow_writer::ArrowWriter;
 use parquet::record::Field;
 use std::sync::Arc;
 use std::fs::File;
-fn tmain() {
-    // Create some data
-    let ids = Int64Array::from(vec![1, 2, 3]);
-    let names = StringArray::from(vec!["Alice", "Bob", "Charlie"]);
-    let ages = Int64Array::from(vec![25, 30, 35]);
-    
-    // Create record batch
-    let batch = RecordBatch::try_from_iter(vec![
-        ("id", Arc::new(ids) as Arc<dyn arrow::array::Array>),
-        ("name", Arc::new(names)),
-        ("age", Arc::new(ages)),
-    ]).unwrap();
-    
-    // Write to file
-    let file = File::create("test.parquet").unwrap();
-    let mut writer = ArrowWriter::try_new(file, batch.schema(), None).unwrap();
-    writer.write(&batch).unwrap();
-    writer.close().unwrap();
-    
-    println!("Created test.parquet successfully!");
-}
 
 fn main() {
     let args:Vec<String>=args().collect();
