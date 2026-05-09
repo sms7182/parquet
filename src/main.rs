@@ -1,7 +1,7 @@
 use std::env::args;
 
 use arrow::compute::kernels::{numeric, rank};
-use parquet::record::Row;
+use parquet::record::{Row, reader};
 use parquet::schema::types::Type;
 use parquet::file::reader::{FileReader,SerializedFileReader};
 use arrow::array::{Int64Array, StringArray};
@@ -48,6 +48,9 @@ fn main() {
         "head"=>{
             head_command(&args[1..])
         },
+        "count"=>{
+            count_command(&args[1..]);
+        }
         _=>{
             eprintln!("{}:{}",red("unknown command "),red(&args[1]));
             std::process::exit(1);
@@ -114,7 +117,7 @@ fn head_command(parts:&[String]){
    else{
     
     // println!("Show first {} rows from {}",green(parts[2].as_str()),green(parts[1].as_str()));
-     let file=std::fs::File::open(&parts[1]).unwrap();
+    let file=std::fs::File::open(&parts[1]).unwrap();
     let reader=SerializedFileReader::new(file).unwrap();
     let schema=reader.metadata().file_metadata().schema();
     let fields=schema.get_fields();
@@ -146,6 +149,19 @@ fn head_command(parts:&[String]){
    }
 }
 
+fn count_command(parts:&[String]){
+let file=std::fs::File::open(&parts[1]).unwrap();
+    let reader=SerializedFileReader::new(file).unwrap();
+    let count=reader.metadata().file_metadata().num_rows();
+    println!("Count of rows :{:?}",count);
+}
+
+
+
+
+
+
+
 fn inspect_row_detail(row:&Row){
     for (col_name,value) in row.get_column_iter(){
         match value {
@@ -171,6 +187,9 @@ fn inspect_row_detail(row:&Row){
         }
     }
 }
+
+
+
 fn green(text: &str) -> String {
     format!("\x1b[32m{}\x1b[0m", text)
 }
