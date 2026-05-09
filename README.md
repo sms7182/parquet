@@ -20,3 +20,7 @@ Command-line Parquet file viewer written in Rust.
 
 ```bash
 cargo install pq-rs
+pq schema data.parquet
+pq head data.parquet 5
+pq columns data.parquet
+pq count data.parquet 

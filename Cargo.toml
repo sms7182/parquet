@@ -1,12 +1,17 @@
 [package]
 name = "pq-rs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 authors= ["Mojtaba Safavi <sms7182@gmail>"]
 description="Command-line Parquet file viewer written in Rust"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/sms7182/parquet"
 readme = "README.md"
+
+[[bin]]
+name="pq"
+path="src/main.rs"
+
 
 [dependencies]
 anyhow = "1.0.102"
