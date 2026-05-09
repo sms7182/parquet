@@ -50,6 +50,9 @@ fn main() {
         },
         "count"=>{
             count_command(&args[1..]);
+        },
+        "columns"=>{
+            columns_command(&args[1..]);
         }
         _=>{
             eprintln!("{}:{}",red("unknown command "),red(&args[1]));
@@ -150,13 +153,25 @@ fn head_command(parts:&[String]){
 }
 
 fn count_command(parts:&[String]){
-let file=std::fs::File::open(&parts[1]).unwrap();
+    let file=std::fs::File::open(&parts[1]).unwrap();
     let reader=SerializedFileReader::new(file).unwrap();
     let count=reader.metadata().file_metadata().num_rows();
     println!("Count of rows :{:?}",count);
 }
 
-
+fn columns_command(parts:&[String]){
+    let file=std::fs::File::open(&parts[1]).unwrap();
+    let reader=SerializedFileReader::new(file).unwrap();
+    let schema=reader.metadata().file_metadata().schema();
+    let fields=schema.get_fields();
+    
+    println!("{:-<50}","");
+    for field in fields{
+        print!("| {} ",green(field.name()));
+    }
+    println!();
+    println!("{:-<50}","");
+}
 
 
 
