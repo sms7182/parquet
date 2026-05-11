@@ -76,7 +76,7 @@ fn main() {
             export_command(&args[1..]);
         },
         "filter"=>{
-            println!("bbefor");
+           
             filter_command(&args[1..]);
         },
         _=>{
@@ -315,98 +315,121 @@ fn export_command(parts:&[String]){
 }
 
 
-fn filter_command(parts:&[String]){
-  eprintln!("{:?}",parts);
+fn filter_command(second_parts:&[String]){
+  eprintln!("{:?}",second_parts);
   
   
-   let mut indx=1;
+   let mut indx=0;
    let mut expression=Expression{
     conditions:vec![],
     operators:vec![]
    };
-
-   while indx<parts.len() {
-    
+   let mut parts:Vec<&str> =second_parts[1].split(" ").collect();
+  
+   while indx<=parts.len() {
+       
        if parts[indx].contains("--"){
         let result=parts[indx].replace("--","");
-        indx=indx+1;
         
-        println!("indx is {:?}",indx);
+       
         match parts[indx].clone(){
             s if s.contains(">=")=>{
-                 let (_,second)=s.split_at(2);
-                let mut condition=create_condition(result.as_str(),">=",second);
+                let mut pairs=s.split(">=");
+                if let Some(field)=pairs.next(){
+                    if let Some(value)=pairs.next(){
+            
+                let mut condition=create_condition(field.replace("--","").as_str(),">=",value);
                 expression.conditions.push(condition);
-                   match extract_operator(indx, parts){
+                   match extract_operator(indx, &parts){
                     LogicOp::None=>{
                         break;
                     },
                     d=>expression.operators.push(d)
                 }
                  indx=indx+2;
-
+              
                 continue;
+            }
+            }
                 
             },
             s if s.contains("<=")=>{
-                let (_,second)=s.split_at(2);
-                let mut condition=create_condition(result.as_str(),"<=",second);
+             let mut pairs=s.split("<=");
+                if let Some(field)=pairs.next(){
+                    if let Some(value)=pairs.next(){
+                println!("field is {} and value is {}",field,value);
+                let mut condition=create_condition(field.replace("--","").as_str(),"<=",value);
                 expression.conditions.push(condition);
-                   match extract_operator(indx, parts){
+                   match extract_operator(indx, &parts){
                     LogicOp::None=>{
                         break;
                     },
                     d=>expression.operators.push(d)
                 }
                  indx=indx+2;
-
+              
                 continue;
+            }
+            }
             },
             s if s.contains(">")=>{
-                let (_,second)=s.split_at(1);
-                let mut condition=create_condition(result.as_str(),">",second);
+             let mut pairs=s.split(">");
+                if let Some(field)=pairs.next(){
+                    if let Some(value)=pairs.next(){
+                println!("field is {} and value is {}",field,value);
+                let mut condition=create_condition(field.replace("--","").as_str(),">",value);
                 expression.conditions.push(condition);
-             
-                match extract_operator(indx, parts){
+                   match extract_operator(indx, &parts){
                     LogicOp::None=>{
                         break;
                     },
                     d=>expression.operators.push(d)
                 }
                  indx=indx+2;
-
+              
                 continue;
+            }
+            }
             },
             s if s.contains("<")=>{
-                 let (_,second)=s.split_at(1);
-                let mut condition=create_condition(result.as_str(),"<",second);
+                  let mut pairs=s.split("<");
+                if let Some(field)=pairs.next(){
+                    if let Some(value)=pairs.next(){
+                println!("field is {} and value is {}",field,value);
+                let mut condition=create_condition(field.replace("--","").as_str(),"<",value);
                 expression.conditions.push(condition);
-                   match extract_operator(indx, parts){
+                   match extract_operator(indx, &parts){
                     LogicOp::None=>{
                         break;
                     },
                     d=>expression.operators.push(d)
                 }
                  indx=indx+2;
-
+              
                 continue;
+            }
+            }
                 
             },
             s if s.contains("=")=>{
-                println!("s is {}",s);
-                let (_,second)=s.split_at(1);
-                let mut condition=create_condition(result.as_str(),"=",second);
-                println!("result is {} and second is {} and indx is {:?}",result.as_str(),second,indx);
+                    let mut pairs=s.split("=");
+                if let Some(field)=pairs.next(){
+                    if let Some(value)=pairs.next(){
+                println!("field is {} and value is {}",field,value);
+                let mut condition=create_condition(field.replace("--","").as_str(),"=",value);
                 expression.conditions.push(condition);
-                   match extract_operator(indx, parts){
+                   match extract_operator(indx, &parts){
                     LogicOp::None=>{
                         break;
                     },
                     d=>expression.operators.push(d)
                 }
-                indx=indx+2;
-
+                 indx=indx+2;
+              
                 continue;
+            }
+            }
+                
             },
             _=>{
                 panic!("unknow operand:")
@@ -427,9 +450,9 @@ fn create_condition(column:&str,operator:&str,value:&str)->Condition{
     Condition { column:column.to_string(), operator:operator.to_string(), value:value.to_string() }
 }
 
-fn extract_operator( indx:usize,parts:&[String])->LogicOp{
+fn extract_operator( indx:usize,parts:&Vec<&str>)->LogicOp{
     if indx+1<parts.len(){
-                    println!("indx is {:?}",indx);
+                   
                     match parts[indx+1].clone(){
                         op if op=="and"=>{
                           return LogicOp::And;
