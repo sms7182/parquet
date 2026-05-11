@@ -15,6 +15,21 @@ use parquet::record::Field;
 use std::error::Error;
 use csv::WriterBuilder;
 
+struct  Condition{
+    column:String,
+    operator:String,
+    value:String,
+}
+struct Expression{
+    conditions:Vec<Condition>,
+    operators:Vec<LogicOp>
+}
+enum LogicOp{
+    And,
+    Or,
+    None
+}
+
 fn print_help() {
     println!("pq - Parquet file tools");
     println!("\nUsage:");
@@ -59,7 +74,11 @@ fn main() {
         },
         "export"=>{
             export_command(&args[1..]);
-        }
+        },
+        "filter"=>{
+            println!("bbefor");
+            filter_command(&args[1..]);
+        },
         _=>{
             eprintln!("{}:{}",red("unknown command "),red(&args[1]));
             std::process::exit(1);
@@ -294,6 +313,140 @@ fn export_command(parts:&[String]){
 
 
 }
+
+
+fn filter_command(parts:&[String]){
+  eprintln!("{:?}",parts);
+  
+  
+   let mut indx=1;
+   let mut expression=Expression{
+    conditions:vec![],
+    operators:vec![]
+   };
+
+   while indx<parts.len() {
+    
+       if parts[indx].contains("--"){
+        let result=parts[indx].replace("--","");
+        indx=indx+1;
+        
+        println!("indx is {:?}",indx);
+        match parts[indx].clone(){
+            s if s.contains(">=")=>{
+                 let (_,second)=s.split_at(2);
+                let mut condition=create_condition(result.as_str(),">=",second);
+                expression.conditions.push(condition);
+                   match extract_operator(indx, parts){
+                    LogicOp::None=>{
+                        break;
+                    },
+                    d=>expression.operators.push(d)
+                }
+                 indx=indx+2;
+
+                continue;
+                
+            },
+            s if s.contains("<=")=>{
+                let (_,second)=s.split_at(2);
+                let mut condition=create_condition(result.as_str(),"<=",second);
+                expression.conditions.push(condition);
+                   match extract_operator(indx, parts){
+                    LogicOp::None=>{
+                        break;
+                    },
+                    d=>expression.operators.push(d)
+                }
+                 indx=indx+2;
+
+                continue;
+            },
+            s if s.contains(">")=>{
+                let (_,second)=s.split_at(1);
+                let mut condition=create_condition(result.as_str(),">",second);
+                expression.conditions.push(condition);
+             
+                match extract_operator(indx, parts){
+                    LogicOp::None=>{
+                        break;
+                    },
+                    d=>expression.operators.push(d)
+                }
+                 indx=indx+2;
+
+                continue;
+            },
+            s if s.contains("<")=>{
+                 let (_,second)=s.split_at(1);
+                let mut condition=create_condition(result.as_str(),"<",second);
+                expression.conditions.push(condition);
+                   match extract_operator(indx, parts){
+                    LogicOp::None=>{
+                        break;
+                    },
+                    d=>expression.operators.push(d)
+                }
+                 indx=indx+2;
+
+                continue;
+                
+            },
+            s if s.contains("=")=>{
+                println!("s is {}",s);
+                let (_,second)=s.split_at(1);
+                let mut condition=create_condition(result.as_str(),"=",second);
+                println!("result is {} and second is {} and indx is {:?}",result.as_str(),second,indx);
+                expression.conditions.push(condition);
+                   match extract_operator(indx, parts){
+                    LogicOp::None=>{
+                        break;
+                    },
+                    d=>expression.operators.push(d)
+                }
+                indx=indx+2;
+
+                continue;
+            },
+            _=>{
+                panic!("unknow operand:")
+            }
+            
+        }
+        
+       }else {
+            panic!("not handle");
+            
+       }
+
+      
+   }
+}
+
+fn create_condition(column:&str,operator:&str,value:&str)->Condition{
+    Condition { column:column.to_string(), operator:operator.to_string(), value:value.to_string() }
+}
+
+fn extract_operator( indx:usize,parts:&[String])->LogicOp{
+    if indx+1<parts.len(){
+                    println!("indx is {:?}",indx);
+                    match parts[indx+1].clone(){
+                        op if op=="and"=>{
+                          return LogicOp::And;
+                        },
+                        op if op=="or"=>{
+                            return  LogicOp::Or;
+
+                        },
+                        _=>panic!("operand is not correct")
+                        
+                    }
+                }
+               
+                println!("not found operand");
+        return LogicOp::None ;
+}
+
 
 fn convert_to_csv(row:&Row)->Vec<String>{
     let mut record=Vec::new();

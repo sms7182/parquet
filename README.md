@@ -8,6 +8,10 @@ Command-line Parquet file viewer written in Rust.
 - ✅ Head command - done
 - ✅ Columns command - done
 - ✅ Count command - done
+- Filter is downloading ....
+- Filter Export is downloading ...
+- Create Parquet file from postgres data is downloading....
+
 
 ## Features
 
