@@ -2,28 +2,33 @@ use std::env::args;
 use std::fs::File;
 use std::io::BufWriter;
 use csv::Writer;
-use arrow::compute::kernels::{numeric, rank};
-use parquet::arrow::arrow_reader::RowFilter;
-use parquet::record::reader::RowIter;
-use parquet::record::{Row, reader};
-use parquet::schema::types::Type;
+use parquet::arrow::push_decoder::NoInput;
+use parquet::file::writer::SerializedFileWriter;
+use parquet::record::{Row, reader,RowAccessor};
+use parquet::record::Field;       
+use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
+use parquet::schema::types::{SchemaDescPtr, SchemaDescriptor, Type};
 use parquet::file::reader::{FileReader,SerializedFileReader};
-use arrow::array::{Int64Array, StringArray};
-use arrow::record_batch::RecordBatch;
-use parquet::arrow::arrow_writer::ArrowWriter;
-use parquet::record::Field;
+
 use std::error::Error;
 use csv::WriterBuilder;
+use std::collections::HashMap;
+use std::sync::Arc;
 
+#[derive(Debug)]
 struct  Condition{
     column:String,
     operator:String,
     value:String,
 }
+
+#[derive(Debug)]
 struct Expression{
     conditions:Vec<Condition>,
     operators:Vec<LogicOp>
 }
+
+#[derive(Debug)]
 enum LogicOp{
     And,
     Or,
@@ -317,14 +322,24 @@ fn export_command(parts:&[String]){
 
 fn filter_command(second_parts:&[String]){
   eprintln!("{:?}",second_parts);
-  
+
+    let file=File::open(&second_parts[1]).unwrap();
+    let reader=SerializedFileReader::new(file).unwrap();
   
    let mut indx=0;
    let mut expression=Expression{
     conditions:vec![],
     operators:vec![]
    };
-   let mut parts:Vec<&str> =second_parts[1].split(" ").collect();
+   if !second_parts[3].contains("--"){
+    panic!("result unknown");
+   }
+   let mut output=second_parts[3].replace("--","");
+   
+
+
+
+   let mut parts:Vec<&str> =second_parts[2].split(" ").collect();
   
    while indx<=parts.len() {
        
@@ -441,10 +456,117 @@ fn filter_command(second_parts:&[String]){
             panic!("not handle");
             
        }
-
-      
    }
+   let metadata=reader.metadata();
+   let schema=metadata.file_metadata().schema_descr();
+    let mut column_names = Vec::new();
+
+   let mut column_indices=HashMap::new();
+   for (idx,col) in schema.columns().iter().enumerate(){
+    let name=col.path().string();
+    column_indices.insert(name.clone(),idx);
+     column_names.push(name);
+   }
+
+   let mut indexed_conditions=Vec::new();
+   for cond in &expression.conditions{
+      match  column_indices.get(&cond.column) {
+          Some(idx)=>{
+            indexed_conditions.push((*idx,cond));
+          }
+          None=>{
+            eprintln!("Column '{}' not found. Available: {:?}", cond.column, column_indices.keys());
+          }
+      }
+   }
+
+   let row_iter = reader.get_row_iter(None).expect("Failed to get row iterator");
+   let mut csv_file=File::create(output).unwrap();
+    let header = column_names.join(",");
+    
+   for row_res in row_iter{
+            let row = row_res.expect("Failed to read row");
+            let mut results=Vec::new();
+            for (idx,cond)in &indexed_conditions{
+                  let is_match = evaluate_condition(&row, *idx, cond);
+                  results.push(is_match);
+            }
+              let final_match = combine_results(&results, &expression.operators);
+        
+        if final_match {
+            println!("{:?}", row);
+        }
+   }
+
 }
+fn combine_results(results: &[bool], operators: &[LogicOp]) -> bool {
+    if results.is_empty() {
+        return false;
+    }
+    
+    let mut final_result = results[0];
+    for (i, op) in operators.iter().enumerate() {
+        let next = results[i + 1];
+        final_result = match op {
+            LogicOp::And => final_result && next,
+            LogicOp::Or => final_result || next,
+            _=>continue
+        };
+    }
+    final_result
+}
+
+
+
+fn evaluate_condition(row: &Row, col_idx: usize, condition: &Condition) -> bool {
+    match condition.operator.as_str() {
+        ">" => {
+            if let Ok(val) = row.get_long(col_idx) {
+                let expected: i64 = condition.value.parse().unwrap_or(0);
+                val > expected
+            } else {
+                false
+            }
+        }
+        "<" => {
+            if let Ok(val) = row.get_long(col_idx) {
+                let expected: i64 = condition.value.parse().unwrap_or(0);
+                val < expected
+            } else {
+                false
+            }
+        }
+        "=" => {
+            if let Ok(val) = row.get_string(col_idx) {
+                val == condition.value.as_str()
+            }
+            else if let Ok(val) = row.get_long(col_idx) {
+                val.to_string() == condition.value
+            }
+            else {
+                false
+            }
+        }
+        ">=" => {
+            if let Ok(val) = row.get_long(col_idx) {
+                let expected: i64 = condition.value.parse().unwrap_or(0);
+                val >= expected
+            } else {
+                false
+            }
+        }
+        "<=" => {
+            if let Ok(val) = row.get_long(col_idx) {
+                let expected: i64 = condition.value.parse().unwrap_or(0);
+                val <= expected
+            } else {
+                false
+            }
+        }
+        _ => false,
+    }
+}
+
 
 fn create_condition(column:&str,operator:&str,value:&str)->Condition{
     Condition { column:column.to_string(), operator:operator.to_string(), value:value.to_string() }
