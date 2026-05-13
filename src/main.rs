@@ -49,6 +49,8 @@ fn print_help() {
     println!("  pq head data.parquet 5");
     println!("  pq head data.parquet 5 --csv output.csv");
     println!("  pq export data.parquet --output data.csv");
+    println!("  pq filter  data.parquet 'col1>=50 and col2=20 or col3=tehran--result.csv' ");
+
 }
 fn main() {
     let args:Vec<String>=args().collect();
