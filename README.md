@@ -8,8 +8,8 @@ Command-line Parquet file viewer written in Rust.
 - ✅ Head command - done
 - ✅ Columns command - done
 - ✅ Count command - done
-- Filter is downloading ....
-- Filter Export is downloading ...
+- ✅ Filter command done
+- ✅ Filter command done
 - Create Parquet file from postgres data is downloading....
 
 
@@ -19,6 +19,8 @@ Command-line Parquet file viewer written in Rust.
 - Show first N rows (like `head`)
 - Show only column names
 - Count total records
+- export csv file 
+- filter and out to csv file
 
 ## Installation
 
@@ -29,3 +31,4 @@ pq head data.parquet 5 optional(--csv filename)
 pq columns data.parquet
 pq count data.parquet 
 pq export data.parquet --output filename.csv
+pq filter data.parquet "--age>=18 and --city=tehran" --result.csv
