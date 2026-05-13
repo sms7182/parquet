@@ -1,6 +1,8 @@
 use std::env::args;
 use std::fs::File;
 use std::io::BufWriter;
+
+use std::io::Write;
 use csv::Writer;
 use parquet::arrow::push_decoder::NoInput;
 use parquet::file::writer::SerializedFileWriter;
@@ -483,6 +485,8 @@ fn filter_command(second_parts:&[String]){
    let row_iter = reader.get_row_iter(None).expect("Failed to get row iterator");
    let mut csv_file=File::create(output).unwrap();
     let header = column_names.join(",");
+    writeln!(csv_file,"{}",header);
+     let mut rows_written = 0;
     
    for row_res in row_iter{
             let row = row_res.expect("Failed to read row");
@@ -494,10 +498,33 @@ fn filter_command(second_parts:&[String]){
               let final_match = combine_results(&results, &expression.operators);
         
         if final_match {
-            println!("{:?}", row);
+           let mut row_values = Vec::new();
+            for name in &column_names {
+                let idx = column_indices[name];
+                let value = get_value_as_string(&row, idx);
+                row_values.push(value);
+            }
+            writeln!(csv_file, "{}", row_values.join(","));
+            rows_written += 1;
         }
    }
 
+}
+
+fn get_value_as_string(row: &Row, col_idx: usize) -> String {
+    if let Ok(val) = row.get_string(col_idx) {
+        return format!("\"{}\"", val);
+    }
+    if let Ok(val) = row.get_long(col_idx) {
+        return val.to_string();
+    }
+    if let Ok(val) = row.get_int(col_idx) {
+        return val.to_string();
+    }
+    if let Ok(val) = row.get_bool(col_idx) {
+        return val.to_string();
+    }
+    "".to_string()
 }
 fn combine_results(results: &[bool], operators: &[LogicOp]) -> bool {
     if results.is_empty() {
