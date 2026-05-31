@@ -88,6 +88,10 @@ fn main() {
            
             filter_command(&args[1..]);
         },
+        "dump-postgres"=>{
+            dump_postgres_command(&args[1..]);
+        },
+
         _=>{
             eprintln!("{}:{}",red("unknown command "),red(&args[1]));
             std::process::exit(1);
@@ -323,6 +327,16 @@ fn export_command(parts:&[String]){
 
 }
 
+
+fn dump_postgres_command(second_parts:&[String]){
+    if second_parts[2]!="--conn"{
+        panic!("second param for connection to postgres incorrect");
+    }
+    if second_parts[4]!="--table"{
+        panic!("table unknown command");
+    }
+
+}   
 
 fn filter_command(second_parts:&[String]){
   eprintln!("{:?}",second_parts);
