@@ -336,6 +336,18 @@ fn dump_postgres_command(second_parts:&[String]){
         panic!("table unknown command");
     }
 
+    let mut exist=false;
+    //check exist file ....
+    
+    let mut query=second_parts[5].clone();
+    if exist{
+        if query.to_lowercase().contains("where"){
+        
+        }else {
+
+            query+=" and ";
+        }
+    }
 }   
 
 fn filter_command(second_parts:&[String]){
