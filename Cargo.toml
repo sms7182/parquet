@@ -17,5 +17,6 @@ path="src/main.rs"
 anyhow = "1.0.102"
 csv = "1.4.0"
 parquet = "58.2.0"
+tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
 tokio-postgres = "0.7.17"
 

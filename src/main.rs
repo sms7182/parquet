@@ -11,8 +11,8 @@ use parquet::record::Field;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use parquet::schema::types::{SchemaDescPtr, SchemaDescriptor, Type};
 use parquet::file::reader::{FileReader,SerializedFileReader};
-
-use std::error::Error;
+use tokio_postgres::{Client, NoTls, Error};
+use anyhow::Result;
 use csv::WriterBuilder;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -52,7 +52,8 @@ fn print_help() {
     println!("  pq filter  data.parquet 'col1>=50 and col2=20 or col3=tehran--result.csv' ");
 
 }
-fn main() {
+#[tokio::main]
+async fn main() {
     let args:Vec<String>=args().collect();
     
 
@@ -89,7 +90,9 @@ fn main() {
             filter_command(&args[1..]);
         },
         "dump-postgres"=>{
-            dump_postgres_command(&args[1..]);
+            if let Err(er)=dump_postgres_command(&args[1..]).await{
+
+            };
         },
 
         _=>{
@@ -328,7 +331,7 @@ fn export_command(parts:&[String]){
 }
 
 
-fn dump_postgres_command(second_parts:&[String]){
+ async fn dump_postgres_command(second_parts:&[String])->Result<(),Box<dyn std::error::Error>>{
     if second_parts[2]!="--conn"{
         panic!("second param for connection to postgres incorrect");
     }
@@ -336,18 +339,13 @@ fn dump_postgres_command(second_parts:&[String]){
         panic!("table unknown command");
     }
 
-    let mut exist=false;
-    //check exist file ....
+
+    
     
     let mut query=second_parts[5].clone();
-    if exist{
-        if query.to_lowercase().contains("where"){
-        
-        }else {
+    //using hold cursor in postgres
 
-            query+=" and ";
-        }
-    }
+    Ok(())
 }   
 
 fn filter_command(second_parts:&[String]){
@@ -714,7 +712,7 @@ fn red(text: &str) -> String {
     format!("\x1b[31m{}\x1b[0m", text)
 }
 
-fn create_csv(file_name:&str,headers:&[String],rows:&[Vec<String>])->Result<(),Box<dyn Error>>{
+fn create_csv(file_name:&str,headers:&[String],rows:&[Vec<String>])->Result<()>{
     let mut wtr=Writer::from_path(file_name)?;
     wtr.write_record(headers)?;
     for row in rows{
