@@ -335,15 +335,30 @@ fn export_command(parts:&[String]){
     if second_parts[2]!="--conn"{
         panic!("second param for connection to postgres incorrect");
     }
-    if second_parts[4]!="--table"{
-        panic!("table unknown command");
+    if second_parts[4]!="--query-file"{
+        panic!("query unknown command");
     }
 
+    if second_parts[6]!="--resume-column"{
+        panic!("order columns should be specified");
+    }
 
+    let (client,connection)= tokio_postgres::connect(
+        &second_parts[3],
+        NoTls
+    ).await?;
+    tokio::spawn(
+        async move{
+            if let Err(e)=connection.await{
+                eprintln!("connection error :{}",e);
+            }
+        });
+    println!("connected to db");
     
-    
-    let mut query=second_parts[5].clone();
-    //using hold cursor in postgres
+    //subquery 
+    let subquery="select";
+    let mut query=format!("select * from ({}) q where q.{} $last_id order by q.{}",subquery,&second_parts[7],&second_parts[7]);
+
 
     Ok(())
 }   
