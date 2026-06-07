@@ -1,0 +1,1 @@
+select * from table1 t where t.name like '%test%'

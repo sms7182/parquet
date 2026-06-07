@@ -2,6 +2,8 @@ use std::env::args;
 use std::fs::File;
 use std::io::BufWriter;
 
+use std::fs;
+
 use std::io::Write;
 use csv::Writer;
 use parquet::arrow::push_decoder::NoInput;
@@ -332,21 +334,32 @@ fn export_command(parts:&[String]){
 
 
  async fn dump_postgres_command(second_parts:&[String])->Result<(),Box<dyn std::error::Error>>{
-    if second_parts[2]!="--conn"{
+    println!("test is started");
+    if second_parts[1]!="--conn"{
         panic!("second param for connection to postgres incorrect");
     }
-    if second_parts[4]!="--query-file"{
+    if second_parts[3]!="--query-file"{
         panic!("query unknown command");
     }
-
-    if second_parts[6]!="--resume-column"{
+    let subquery=fs::read_to_string(&second_parts[4]).expect("should have been able to read the file");
+    
+    
+    if second_parts[5]!="--resume-column"{
         panic!("order columns should be specified");
     }
-
-    let (client,connection)= tokio_postgres::connect(
-        &second_parts[3],
+    let mut last_id=0;
+    let mut query=format!("select * from ({}) q where q.{} > {} order by q.{}",subquery,&second_parts[6],last_id,&second_parts[6]);
+    println!("with text:\n{query}");
+    let (client,connection)= match tokio_postgres::connect(
+        &second_parts[2],
         NoTls
-    ).await?;
+    ).await{
+        Ok(c)=>c,
+        Err(e)=>{
+            eprintln!("connection error :{}",e);
+            return Ok(());
+        }
+    };
     tokio::spawn(
         async move{
             if let Err(e)=connection.await{
@@ -354,11 +367,8 @@ fn export_command(parts:&[String]){
             }
         });
     println!("connected to db");
-    
     //subquery 
-    let subquery="select";
-    let mut query=format!("select * from ({}) q where q.{} $last_id order by q.{}",subquery,&second_parts[7],&second_parts[7]);
-
+    
 
     Ok(())
 }   
